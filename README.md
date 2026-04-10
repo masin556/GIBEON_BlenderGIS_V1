@@ -34,6 +34,8 @@ you can use heightmap export
 - This will provide accurate GIS information. 
 <img width="1193" height="393" alt="image" src="https://github.com/user-attachments/assets/af17596f-ed65-442a-8f51-0039cd73cda6" />
 
+## Update Issue : When exporting, the tilemap does not render properly, causing the grid to appear broken in Unreal Engine [Under correction]
+
 # when u use GIS
 ---
 API Key Need
