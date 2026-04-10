@@ -28,6 +28,12 @@ Exemple : import vector contour lines, create faces by triangulation and put a t
 
 The Creator of the Budget : ChungSik Shin
 
+# Update
+----
+you can use heightmap export
+- This will provide accurate GIS information. 
+<img width="1193" height="393" alt="image" src="https://github.com/user-attachments/assets/af17596f-ed65-442a-8f51-0039cd73cda6" />
+
 # when u use GIS
 ---
 API Key Need
