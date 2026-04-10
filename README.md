@@ -1,4 +1,4 @@
-Blender GIS
+<img width="1137" height="320" alt="image" src="https://github.com/user-attachments/assets/74a25575-3e41-43a0-a6de-700496d69d4f" />Blender GIS
 ==========
 Blender minimum version required : v2.83
 ==
@@ -27,3 +27,13 @@ Exemple : import vector contour lines, create faces by triangulation and put a t
 **And more :** Manage georeferencing informations of a scene, compute a terrain mesh by Delaunay triangulation, drop objects on a terrain mesh, make terrain analysis using shader nodes, setup new cameras from geotagged photos, setup a camera to render with Blender a new georeferenced raster.
 
 The Creator of the Budget : ChungSik Shin
+
+# when u use GIS
+---
+API Key Need
+
+<img width="1478" height="1020" alt="image" src="https://github.com/user-attachments/assets/4772223c-b6ef-4476-8e72-31372e5d180d" />
+
+<img width="1137" height="320" alt="image" src="https://github.com/user-attachments/assets/22277137-5263-4e95-9805-9afe673ad32a" />
+
+https://portal.opentopography.org/API/globaldem?demtype=SRTMGL1&west={W}&east={E}&south={S}&north={N}&outputFormat=GTiff&API_Key={API_KEY} <- here delete {API_KEY} and input ur api key
