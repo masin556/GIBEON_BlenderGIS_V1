@@ -109,22 +109,24 @@ https://stackoverflow.com/questions/1643327/sys-excepthook-and-threading
 '''
 import threading
 
-init_original = threading.Thread.__init__
+if not hasattr(threading.Thread, "_bgis_patched"):
+	init_original = threading.Thread.__init__
 
-def init(self, *args, **kwargs):
+	def init(self, *args, **kwargs):
 
-	init_original(self, *args, **kwargs)
-	run_original = self.run
+		init_original(self, *args, **kwargs)
+		run_original = self.run
 
-	def run_with_except_hook(*args2, **kwargs2):
-		try:
-			run_original(*args2, **kwargs2)
-		except Exception:
-			sys.excepthook(*sys.exc_info())
+		def run_with_except_hook(*args2, **kwargs2):
+			try:
+				run_original(*args2, **kwargs2)
+			except Exception:
+				sys.excepthook(*sys.exc_info())
 
-	self.run = run_with_except_hook
+		self.run = run_with_except_hook
 
-threading.Thread.__init__ = init
+	threading.Thread.__init__ = init
+	threading.Thread._bgis_patched = True
 
 ####
 
@@ -206,6 +208,8 @@ class VIEW3D_MT_menu_gis_import(bpy.types.Menu):
 			self.layout.operator("importgis.osm_file", icon_value=icons_dict["osm"].icon_id, text="Open Street Map xml (.osm)")
 		if IMPORT_ASC:
 			self.layout.operator('importgis.asc_file', icon_value=icons_dict["asc"].icon_id, text="ESRI ASCII Grid (.asc)")
+		if EXPORT_UE:
+			self.layout.operator('importgis.ue_tile_manifest', text="UE Tile Manifest (.json)", icon='FILEBROWSER')
 
 class VIEW3D_MT_menu_gis_export(bpy.types.Menu):
 	bl_label = "Export"

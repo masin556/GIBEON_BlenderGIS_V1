@@ -41,7 +41,17 @@ from ..proj.srs import SRS
 from .. import settings
 USER_AGENT = settings.user_agent
 
-TIMEOUT = 4
+TIMEOUT = 12
+MAX_RETRIES = 2
+RETRY_BACKOFF_SEC = 0.25
+
+
+def _build_tile_url_candidates(url):
+	candidates = [url]
+	if isinstance(url, str) and url.startswith("http://"):
+		candidates.append("https://" + url[len("http://"):])
+	# Keep order while removing duplicates.
+	return list(dict.fromkeys(candidates))
 
 # Set mosaic backgroung image color, it will be the base color for area not covered
 # by the map service (ie when requests return non valid data)
@@ -395,9 +405,9 @@ class MapService():
 		#Fake browser header
 		self.headers = {
 			'Accept' : 'image/png,image/*;q=0.8,*/*;q=0.5' ,
-			'Accept-Charset' : 'ISO-8859-1,utf-8;q=0.7,*;q=0.7' ,
+			'Accept-Charset' : 'utf-8;q=0.9,*;q=0.7' ,
 			#'Accept-Encoding' : 'gzip,deflate', #urllib2 doesn't automatically uncompress the data
-			'Accept-Language' : 'fr,en-us,en;q=0.5' ,
+			'Accept-Language' : 'en-US,en;q=0.8' ,
 			#'Keep-Alive': 115 ,
 			'Proxy-Connection' : 'keep-alive',
 			'User-Agent' : USER_AGENT,
@@ -407,6 +417,11 @@ class MapService():
 		self.running = False #flag using to stop getTiles() / getImage() process
 		self.nbTiles = 0
 		self.cptTiles = 0
+		self.lastFailedTiles = 0
+		self.lastRequestTiles = 0
+		self.lastMissingTiles = 0
+		self.lastHTTPFailures = 0
+		self.lastErrorMessage = ''
 
 		#codes that indicate the current status of the service
 		self.status = 0
@@ -426,6 +441,7 @@ class MapService():
 
 	def start(self):
 		self.running = True
+		self.lastErrorMessage = ''
 		reporter = threading.Thread(target=self.reportLoop)
 		reporter.setDaemon(True) #daemon threads will die when the main non-daemon thread have exited.
 		reporter.start()
@@ -440,7 +456,10 @@ class MapService():
 		if self.status == 1:
 			return 'Get cache database...'
 		if self.status == 2:
-			return 'Downloading... ' + str(self.cptTiles)+'/'+str(self.nbTiles)
+			msg = 'Downloading... ' + str(self.cptTiles)+'/'+str(self.nbTiles)
+			if self.lastFailedTiles > 0 or self.lastMissingTiles > 0:
+				msg += f" fail:{self.lastFailedTiles} miss:{self.lastMissingTiles}"
+			return msg
 		if self.status == 3:
 			return 'Building mosaic...'
 		if self.status == 4:
@@ -579,16 +598,35 @@ class MapService():
 		url = self.buildUrl(laykey, col, row, zoom)
 		log.debug(url)
 
-		try:
-			#make request
-			req = urllib.request.Request(url, None, self.headers)
-			handle = urllib.request.urlopen(req, timeout=TIMEOUT)
-			#open image stream
-			data = handle.read()
-			handle.close()
-		except Exception as e:
-			log.error("Can't download tile x{} y{}. Error {}".format(col, row, e))
-			data = None
+		candidate_urls = _build_tile_url_candidates(url)
+
+		data = None
+		last_err = None
+		for req_url in candidate_urls:
+			for attempt in range(MAX_RETRIES + 1):
+				try:
+					req = urllib.request.Request(req_url, None, self.headers)
+					handle = urllib.request.urlopen(req, timeout=TIMEOUT)
+					candidate_data = handle.read()
+					handle.close()
+					if imghdr.what(None, candidate_data) is None:
+						candidate_data = None
+					data = candidate_data
+					if data is None:
+						raise ValueError("Response is not a valid image tile")
+					last_err = None
+					break
+				except Exception as e:
+					last_err = e
+					self.lastHTTPFailures += 1
+					if attempt < MAX_RETRIES:
+						time.sleep(RETRY_BACKOFF_SEC * (attempt + 1))
+			if data is not None:
+				break
+
+		if data is None and last_err is not None:
+			self.lastErrorMessage = str(last_err)
+			log.error("Can't download tile x{} y{} z{}. Error {}".format(col, row, zoom, last_err))
 
 		#Make sure the stream is correct
 		if data is not None:
@@ -685,6 +723,9 @@ class MapService():
 				data = self.tileRequest(laykey, col, row, zoom, toDstGrid)
 				if data is not None:
 					tilesData.put( (col, row, zoom, data) ) #will block if the queue is full
+				else:
+					with self.lock:
+						self.lastFailedTiles += 1
 				if cpt:
 					self.cptTiles += 1
 				#self.nTaskDone += 1
@@ -713,6 +754,11 @@ class MapService():
 			#init cpt progress
 			self.nbTiles = len(tiles)
 			self.cptTiles = 0
+			self.lastRequestTiles = len(tiles)
+			self.lastFailedTiles = 0
+			self.lastMissingTiles = 0
+			self.lastHTTPFailures = 0
+			self.lastErrorMessage = ''
 
 		#self.nTaskDone = 0
 
@@ -859,6 +905,14 @@ class MapService():
 
 			##method 1) Get cached tiles
 			tiles = cache.getTiles(chunkTiles) #[(x,y,z,data)]
+			got = {(c, r, z) for c, r, z, _ in tiles}
+			missingTiles = [t for t in chunkTiles if t not in got]
+			if missingTiles:
+				if cpt:
+					self.lastMissingTiles += len(missingTiles)
+				for col, row, z in missingTiles:
+					data = self.tileRequest(laykey, col, row, z, toDstGrid)
+					tiles.append((col, row, z, data))
 
 			##method 2) Get tiles from www or cache (all tiles must fit in memory)
 			#tiles = self.getTiles(laykey, chunkTiles, toDstGrid, nbThread, cpt)

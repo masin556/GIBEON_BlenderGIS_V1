@@ -149,7 +149,7 @@ SOURCES = {
 			"SAT" : {"urlKey" : 's', "name" : 'Satellite', "description" : '', "format" : 'jpeg', "zmin" : 0, "zmax" : 22},
 			"MAP" : {"urlKey" : 'm', "name" : 'Map', "description" : '', "format" : 'png', "zmin" : 0, "zmax" : 22}
 		},
-		"urlTemplate": "http://mt0.google.com/vt/lyrs={LAY}&x={X}&y={Y}&z={Z}",
+		"urlTemplate": "https://mt0.google.com/vt/lyrs={LAY}&x={X}&y={Y}&z={Z}",
 		"referer": "https://www.google.com/maps"
 	},
 
@@ -178,8 +178,8 @@ SOURCES = {
 			"SAT" : {"urlKey" : 'A', "name" : 'Satellite', "description" : '', "format" : 'jpeg', "zmin" : 0, "zmax" : 22},
 			"MAP" : {"urlKey" : 'G', "name" : 'Map', "description" : '', "format" : 'png', "zmin" : 0, "zmax" : 22}
 		},
-		"urlTemplate": "http://ak.dynamic.t0.tiles.virtualearth.net/comp/ch/{QUADKEY}?it={LAY}",
-		"referer": "http://www.bing.com/maps"
+		"urlTemplate": "https://ak.dynamic.t0.tiles.virtualearth.net/comp/ch/{QUADKEY}?it={LAY}",
+		"referer": "https://www.bing.com/maps"
 	},
 
 
@@ -224,7 +224,7 @@ SOURCES = {
 			"WRLD" : {"urlKey" : 'osm_auto:all', "name" : 'WMS', "description" : '', "format" : 'png', "style" : '', "zmin" : 0, "zmax" : 20}
 		},
 		"urlTemplate": {
-			"BASE_URL" : ' http://maps.heigit.org/osm-wms/service?',
+			"BASE_URL" : 'https://maps.heigit.org/osm-wms/service?',
 			"SERVICE" : 'WMS',
 			"VERSION" : '1.1.1',
 			"REQUEST" : 'GetMap',
@@ -237,7 +237,7 @@ SOURCES = {
 			"HEIGHT" : '{HEIGHT}',
 			"TRANSPARENT" : "False"
 			},
-		"referer": "http://www.osm-wms.de/"
+		"referer": "https://maps.heigit.org/"
 	},
 
 

@@ -208,7 +208,18 @@ class BaseMap(GeoScene):
 		else:
 			toDstGrid = True
 
-		mosaic = self.srv.getImage(self.laykey, bbox, self.zoom, toDstGrid=toDstGrid, outCRS=self.crs)
+		mosaic = self.srv.getImage(self.laykey, bbox, z, toDstGrid=toDstGrid, outCRS=self.crs)
+		total = max(1, int(getattr(self.srv, 'lastRequestTiles', 0)))
+		fail = int(getattr(self.srv, 'lastFailedTiles', 0)) + int(getattr(self.srv, 'lastMissingTiles', 0))
+		if z > self.layer.zmin and fail / total > 0.6:
+			# Too many missing tiles at this zoom level. Retry one level lower.
+			z2 = z - 1
+			log.warning(
+				"High tile failure ratio at z=%d (%d/%d). Retrying with z=%d",
+				z, fail, total, z2
+			)
+			mosaic = self.srv.getImage(self.laykey, bbox, z2, toDstGrid=toDstGrid, outCRS=self.crs)
+			self.zoom = z2
 
 		return mosaic
 
@@ -317,6 +328,10 @@ def drawInfosText(self, context):
 	txt += ' ' + str((int(self.posx), int(self.posy)))
 	# progress
 	txt += ' ' + self.progress
+	if getattr(self.map.srv, 'lastFailedTiles', 0) > 0 or getattr(self.map.srv, 'lastMissingTiles', 0) > 0:
+		txt += f"  fail:{self.map.srv.lastFailedTiles} miss:{self.map.srv.lastMissingTiles}"
+	if getattr(self.map.srv, 'lastHTTPFailures', 0) > 0:
+		txt += f" http:{self.map.srv.lastHTTPFailures}"
 	context.area.header_text_set(txt)
 
 
